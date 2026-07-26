@@ -13,6 +13,45 @@ import SkeletonCard from '../components/SkeletonCard'
 import SurveyModal from '../components/SurveyModal'
 import api from '../api/axios'
 
+/* ─── Live Stats Bar ─────────────────────────────────────────────────────── */
+function LiveStats() {
+  const [stats, setStats] = useState(null)
+
+  useEffect(() => {
+    // Use public endpoint — just destinations + student count
+    api.get('/destinations').then(() => {}).catch(() => {})
+    // Fetch basic stats from a simple public route
+    fetch('https://trip-survey-backend.onrender.com/api/public/stats')
+      .then(r => r.json())
+      .then(d => setStats(d))
+      .catch(() => {})
+  }, [])
+
+  if (!stats) return null
+
+  return (
+    <div className="bg-white dark:bg-[#1e140c] border-b border-brand-100 dark:border-brand-900/30 py-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-gray-500 dark:text-gray-400 font-body">Total votes:</span>
+            <span className="font-bold text-gray-900 dark:text-white font-sans">{stats.total}</span>
+          </div>
+          {stats.leading && (
+            <div className="flex items-center gap-2">
+              <RiMapPinLine className="text-brand-500" size={15} />
+              <span className="text-gray-500 dark:text-gray-400 font-body">Leading:</span>
+              <span className="font-bold text-brand-600 dark:text-brand-400 font-sans">{stats.leading}</span>
+              <span className="text-gray-400 font-body">({stats.leadingCount} votes)</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const PEOPLE_AVATARS = [
   'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=80&h=80&fit=crop&crop=face',
   'https://images.unsplash.com/photo-1488161628813-04466f872be2?w=80&h=80&fit=crop&crop=face',
@@ -254,6 +293,9 @@ export default function HomePage() {
           <FiChevronDown size={20} />
         </motion.button>
       </section>
+
+      {/* ═══════════ LIVE VOTE COUNTER ═══════════ */}
+      <LiveStats />
 
       {/* ═══════════ DESTINATIONS ═══════════ */}
       <section id="destinations" className="py-24 px-4 sm:px-6 lg:px-8">

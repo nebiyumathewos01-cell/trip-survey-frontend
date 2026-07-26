@@ -88,7 +88,7 @@ export default function Footer() {
         <div className="border-t border-gray-800/60 pt-7 flex flex-col sm:flex-row
                         items-center justify-between gap-3">
           <p className="text-gray-600 text-sm font-body">
-            &copy; 2025 CS Trip Survey &middot; Wachemo University
+            CS Trip Survey &middot; Wachemo University
           </p>
           <p className="text-gray-600 text-sm flex items-center gap-1.5 font-body">
             Made with <FiHeart className="text-red-500" size={13} /> for our class
