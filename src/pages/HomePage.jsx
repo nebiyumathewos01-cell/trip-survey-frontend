@@ -14,41 +14,126 @@ import SurveyModal from '../components/SurveyModal'
 import api from '../api/axios'
 
 /* ─── Live Stats Bar ─────────────────────────────────────────────────────── */
+const DEST_SHORT = {
+  'Arba Minch – Nech Sar National Park': 'Arba Minch',
+  'Durame 777': 'Durame 777',
+  'Wondo Genet': 'Wondo Genet',
+  'Langano Lake': 'Langano',
+  'Other Destination': 'Other',
+}
+
+const BAR_COLORS = ['#f59e0b','#d97706','#fbbf24','#b45309','#78350f']
+
 function LiveStats() {
   const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Use public endpoint — just destinations + student count
-    api.get('/destinations').then(() => {}).catch(() => {})
-    // Fetch basic stats from a simple public route
-    fetch('https://trip-survey-backend.onrender.com/api/public/stats')
-      .then(r => r.json())
-      .then(d => setStats(d))
-      .catch(() => {})
+    const load = () => {
+      fetch('https://trip-survey-backend.onrender.com/api/public/stats')
+        .then(r => r.json())
+        .then(d => { setStats(d); setLoading(false) })
+        .catch(() => setLoading(false))
+    }
+    load()
+    // Refresh every 30 seconds
+    const interval = setInterval(load, 30000)
+    return () => clearInterval(interval)
   }, [])
 
-  if (!stats) return null
+  if (loading || !stats || stats.total === 0) return null
+
+  const max = Math.max(...stats.destinations.map(d => d.count), 1)
 
   return (
-    <div className="bg-white dark:bg-[#1e140c] border-b border-brand-100 dark:border-brand-900/30 py-4">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-gray-500 dark:text-gray-400 font-body">Total votes:</span>
-            <span className="font-bold text-gray-900 dark:text-white font-sans">{stats.total}</span>
-          </div>
-          {stats.leading && (
-            <div className="flex items-center gap-2">
-              <RiMapPinLine className="text-brand-500" size={15} />
-              <span className="text-gray-500 dark:text-gray-400 font-body">Leading:</span>
-              <span className="font-bold text-brand-600 dark:text-brand-400 font-sans">{stats.leading}</span>
-              <span className="text-gray-400 font-body">({stats.leadingCount} votes)</span>
-            </div>
-          )}
+    <motion.section
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="py-14 bg-white dark:bg-[#1e140c] border-b border-brand-100 dark:border-brand-900/30"
+    >
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <span className="section-eyebrow mb-3 block">Live Results</span>
+          <h2 className="font-display text-3xl text-gray-900 dark:text-white tracking-tight">
+            Current Vote Standing
+          </h2>
+          <p className="text-gray-400 font-body text-sm mt-2 flex items-center justify-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block" />
+            {stats.total} student{stats.total !== 1 ? 's' : ''} voted · updates every 30 seconds
+          </p>
+        </div>
+
+        {/* Bar chart */}
+        <div className="space-y-4">
+          {stats.destinations.map((d, i) => {
+            const pct = Math.round((d.count / max) * 100)
+            const isLeading = i === 0
+            const label = DEST_SHORT[d._id] || d._id
+            const votePct = Math.round((d.count / stats.total) * 100)
+
+            return (
+              <motion.div
+                key={d._id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.08 }}
+                className="flex items-center gap-4"
+              >
+                {/* Label */}
+                <div className="w-28 flex-shrink-0 text-right">
+                  <span className={`text-sm font-semibold font-sans truncate block ${
+                    isLeading
+                      ? 'text-brand-600 dark:text-brand-400'
+                      : 'text-gray-600 dark:text-gray-300'
+                  }`}>
+                    {label}
+                  </span>
+                </div>
+
+                {/* Bar */}
+                <div className="flex-1 relative h-10 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pct}%` }}
+                    transition={{ duration: 0.8, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                    className="absolute inset-y-0 left-0 rounded-full flex items-center"
+                    style={{ background: `linear-gradient(90deg, ${BAR_COLORS[i % BAR_COLORS.length]}, ${BAR_COLORS[(i + 1) % BAR_COLORS.length]})` }}
+                  >
+                    {pct > 15 && (
+                      <span className="ml-3 text-white text-xs font-bold font-sans">
+                        {d.count} vote{d.count !== 1 ? 's' : ''} · {votePct}%
+                      </span>
+                    )}
+                  </motion.div>
+                  {pct <= 15 && (
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs font-sans">
+                      {d.count} vote{d.count !== 1 ? 's' : ''} · {votePct}%
+                    </span>
+                  )}
+                </div>
+
+                {/* Leading badge */}
+                {isLeading && (
+                  <div className="flex-shrink-0 bg-brand-500 text-white text-[10px] font-bold
+                                  px-2 py-1 rounded-full font-sans tracking-wide">
+                    LEADING
+                  </div>
+                )}
+              </motion.div>
+            )
+          })}
+        </div>
+
+        {/* Total */}
+        <div className="mt-6 text-center">
+          <p className="text-gray-400 text-sm font-body">
+            Total votes cast: <span className="font-bold text-gray-900 dark:text-white font-sans text-base">{stats.total}</span>
+          </p>
         </div>
       </div>
-    </div>
+    </motion.section>
   )
 }
 
